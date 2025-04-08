@@ -1,7 +1,15 @@
-    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 6: Statistical Analysis for Malaria Data</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <button class="sidebar-toggle" id="sidebar-toggle">Menu</button>    
     <div class="container">
         <h1 id="week6">📅 Week 6: Statistical Analysis for Malaria Data</h1>
-        <link rel="stylesheet" href="styles.css">
         
         <p>This week, we will:<br>
         ✅ <strong>Compare malaria rates between groups</strong> using t-tests and ANOVA<br>
@@ -646,41 +654,136 @@ print(coef_comparison)
         </div>
         
         <div class="explanation">
-p-value`[coef_table$Variable == "rainfall_mm"] < 0.05)){paste("Rainfall is a significant predictor of malaria cases. For each 1 mm increase in monthly rainfall, we expect an increase of approximately", round(coef_table$Coefficient[coef_table$Variable == "rainfall_mm"], 2), "cases, holding other factors constant.")}`
-# 
-# 2. `r if(t_result$p.value < 0.05){paste("There is a significant difference in malaria cases between urban and rural areas, with", ifelse(t_result$estimate[2] > t_result$estimate[1], "rural", "urban"), "areas showing higher case counts. This suggests that targeted interventions should prioritize", ifelse(t_result$estimate[2] > t_result$estimate[1], "rural", "urban"), "communities.")}`
-# 
-# 3. The model diagnostics suggest `r if(shapiro.test(residuals(step_model))$p.value < 0.05){"some departure from normality in the residuals, which may affect the precision of our estimates."} else {"that the model assumptions are reasonably met."}`
-# 
-# ### Recommendations for Public Health Action:
-# 
-# 1. Time malaria prevention campaigns to coincide with or slightly precede periods of `r if(correlation_matrix[1,2] > 0){"increased rainfall"} else {"decreased rainfall"}`.
-# 
-# 2. Allocate resources differentially between urban and rural areas based on the observed differences in case burden.
-# 
-# 3. Continue monitoring environmental factors identified as significant predictors to improve early warning systems.
-# 
-# ### Limitations and Future Research:
-# 
-# - The model explains `r round(r_squared * 100, 1)`% of the variance, indicating other unmeasured factors influence malaria transmission.
-# - Longitudinal studies are needed to establish stronger causal relationships.
-# - Incorporating spatial analysis could provide additional insights into transmission patterns.
-            </code>
-        </div>
-        
-        <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ A comprehensive statistical report should include:<br>
-            &nbsp;&nbsp;- Clear description of methods used<br>
-            &nbsp;&nbsp;- Visual summaries of the data (tables, figures)<br>
-            &nbsp;&nbsp;- Statistical test results with interpretation<br>
-            &nbsp;&nbsp;- Discussion of practical significance beyond p-values<br>
-            ✔ Use R Markdown to combine code, results, and narrative in one document<br>
-            ✔ Inline R code (e.g., <code>`r round(correlation, 2)`</code>) dynamically inserts values into text<br>
-            ✔ Model limitations should be honestly acknowledged</p>
+            <p>✔ Checking model assumptions is crucial for valid inference<br>
+            ✔ Diagnostic plots help identify issues with linearity, normality, and homoscedasticity<br>
+            ✔ <code>shapiro.test()</code> checks if residuals are normally distributed<br>
+            ✔ <code>influence.measures()</code> identifies influential observations that might skew results<br>
+            ✔ <code>rlm()</code> provides robust regression that is less sensitive to outliers</p>
         </div>
         
         <hr>
+        
+        <h2 id="reporting">4️⃣ Creating Statistical Reports</h2>
+        
+        <h3>Step 1: Comprehensive Statistical Reports</h3>
+        <div class="r-code">
+            <code>
+# Example of an R Markdown statistical report structure
+
+# Title: "Analysis of Factors Affecting Malaria Transmission in Region X"
+# 
+# ## Executive Summary
+# 
+# This report analyzes the relationship between environmental factors and malaria cases in Region X during 2018-2022. Key findings show that rainfall has the strongest association with malaria incidence, with a lag period of approximately 2 months. Urban areas show significantly lower case rates than rural areas, and interventions have reduced cases by an average of 42%.
+# 
+# ## Methods
+# 
+# Data was collected from 32 health facilities across 4 districts. Statistical analysis included:
+# - Paired t-tests to compare pre/post intervention case counts
+# - Correlation analysis to examine relationships between environmental factors and malaria cases
+# - Multiple linear regression to identify significant predictors of malaria transmission
+# 
+# ```{r setup, include=FALSE}
+# knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+# library(dplyr)
+# library(ggplot2)
+# library(knitr)
+library(kableExtra)
+
+# Load data
+malaria_data <- read.csv("malaria_data.csv")
+
+# Perform analyses (code not shown here)
+```
+
+## Results
+
+### Comparison of Malaria Cases Between Urban and Rural Areas
+
+```{r urban-rural, fig.width=8, fig.height=4}
+# Create boxplot
+ggplot(malaria_data, aes(x = area_type, y = cases, fill = area_type)) +
+  geom_boxplot() +
+  labs(
+    title = "Distribution of Malaria Cases by Area Type",
+    x = "Area Type",
+    y = "Number of Cases"
+  ) +
+  theme_minimal()
+
+# T-test results (pre-computed)
+t_result <- list(p.value = 0.003, estimate = c(16.2, 47.8))
+```
+
+**Statistical Test Results:** There is a statistically significant difference in malaria cases between urban and rural areas (p = 0.003). Rural areas had an average of 47.8 cases per month, while urban areas had an average of 16.2 cases.
+
+### Relationship Between Environmental Factors and Malaria Cases
+
+```{r correlation-heatmap, fig.width=8, fig.height=6}
+# Display correlation matrix as a heatmap
+corrplot(correlation_matrix, 
+         method = "circle", 
+         type = "upper", 
+         tl.col = "black",
+         tl.srt = 45,
+         addCoef.col = "black")
+```
+
+**Key Findings:**
+- Rainfall shows the strongest correlation with malaria cases (r = 0.67, p < 0.001)
+- The effect of rainfall is strongest with a 2-month lag (r = 0.73, p < 0.001)
+- Temperature has a moderate positive correlation (r = 0.45, p < 0.001)
+- Humidity shows a weak correlation that is not statistically significant (r = 0.21, p = 0.08)
+
+### Predictive Model for Malaria Cases
+
+```{r regression-table}
+# Create a summary table of regression results
+coef_table <- data.frame(
+  Variable = c("(Intercept)", "rainfall_mm", "temperature_avg", "humidity_percent"),
+  Coefficient = c(-12.4, 0.18, 1.67, 0.08),
+  SE = c(5.6, 0.03, 0.57, 0.09),
+  p_value = c(0.031, 0.001, 0.005, 0.376),
+  VIF = c(NA, 1.3, 1.8, 1.4)
+)
+
+kable(coef_table, caption = "Multiple Regression Results (Outcome: Malaria Cases)")
+
+
+# Pre-computed model fit statistics
+r_squared <- 0.64
+adj_r_squared <- 0.61
+```
+
+**Model Interpretation:** The multiple regression model explains 64% of the variance in malaria cases (Adjusted R² = 0.61). Rainfall and temperature are significant predictors (p < 0.05), while humidity is not. Each 1 mm increase in monthly rainfall is associated with an increase of 0.18 malaria cases, holding other factors constant.
+
+## Discussion
+
+### Key Findings:
+
+1. Rainfall is a significant predictor of malaria cases. For each 1 mm increase in monthly rainfall, we expect an increase of approximately 0.18 cases, holding other factors constant.
+
+2. There is a significant difference in malaria cases between urban and rural areas, with rural areas showing higher case counts. This suggests that targeted interventions should prioritize rural communities.
+
+3. The model diagnostics suggest that the model assumptions are reasonably met.
+
+### Recommendations for Public Health Action:
+
+1. Time malaria prevention campaigns to coincide with or slightly precede periods of increased rainfall.
+
+2. Allocate resources differentially between urban and rural areas based on the observed differences in case burden.
+
+3. Continue monitoring environmental factors identified as significant predictors to improve early warning systems.
+
+### Limitations and Future Research:
+
+- The model explains 64% of the variance, indicating other unmeasured factors influence malaria transmission.
+- Longitudinal studies are needed to establish stronger causal relationships.
+- Incorporating spatial analysis could provide additional insights into transmission patterns.
+```
+
+<hr>
         
         <h3>Step 2: Visualizing Statistical Results</h3>
         <div class="r-code">
@@ -958,3 +1061,5 @@ if(!require(piggyback)) {
      
        
   <script src="script.js"></script>
+</body>
+</html>
