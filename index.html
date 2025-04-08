@@ -81,8 +81,8 @@ ggplot(area_comparison, aes(x = area_type, y = mean_cases, fill = area_type)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none")
-            </code>
-        </div></pre>
+            </code></pre>
+        </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
@@ -96,7 +96,7 @@ ggplot(area_comparison, aes(x = area_type, y = mean_cases, fill = area_type)) +
         
         <h3>Step 2: Paired Samples T-test</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Compare pre-intervention and post-intervention malaria cases
 # This assumes we have paired data (same locations before and after intervention)
 
@@ -130,7 +130,7 @@ ggplot(intervention_data, aes(x = location, y = difference)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8))
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -145,7 +145,7 @@ ggplot(intervention_data, aes(x = location, y = difference)) +
         
         <h3>Step 3: One-way ANOVA</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Compare malaria cases across different regions
 anova_result <- aov(cases ~ region, data = malaria_data)
 
@@ -177,7 +177,7 @@ ggplot(region_summary, aes(x = reorder(region, -mean_cases), y = mean_cases, fil
   ) +
   theme_minimal() +
   theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -192,7 +192,7 @@ ggplot(region_summary, aes(x = reorder(region, -mean_cases), y = mean_cases, fil
         
         <h3>Step 4: Two-way ANOVA</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Compare malaria cases by both region and season
 # First, create a season variable if it doesn't exist
 malaria_data <- malaria_data %>%
@@ -226,7 +226,7 @@ ggplot(interaction_plot, aes(x = season, y = mean_cases, group = region, color =
   ) +
   theme_minimal() +
   theme(legend.position = "right")
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -243,7 +243,7 @@ ggplot(interaction_plot, aes(x = season, y = mean_cases, group = region, color =
         
         <h3>Step 1: Basic Correlation Analysis</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Examine the relationship between rainfall and malaria cases
 # Assuming we have monthly rainfall data in our dataset
 
@@ -269,7 +269,7 @@ ggplot(malaria_data, aes(x = rainfall, y = cases)) +
     y = "Number of Malaria Cases"
   ) +
   theme_minimal()
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -284,7 +284,7 @@ ggplot(malaria_data, aes(x = rainfall, y = cases)) +
         
         <h3>Step 2: Multiple Correlations</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Install and load the corrplot package for better visualization
 install.packages("corrplot")
 library(corrplot)
@@ -311,7 +311,7 @@ ggcorrplot(cor_matrix, hc.order = TRUE, type = "lower",
            lab = TRUE, lab_size = 3,
            colors = c("#6D9EC1", "white", "#E46726"),
            title = "Correlation Matrix of Malaria Variables")
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -326,7 +326,7 @@ ggcorrplot(cor_matrix, hc.order = TRUE, type = "lower",
         
         <h3>Step 3: Time-lagged Correlation</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Investigate time-lagged effects of rainfall on malaria cases
 # Malaria cases often lag behind rainfall by 1-2 months
 
@@ -379,7 +379,7 @@ ggplot(ts_data, aes(x = get(paste0("rainfall_lag", optimal_lag)), y = cases)) +
     y = "Number of Malaria Cases"
   ) +
   theme_minimal()
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -396,7 +396,7 @@ ggplot(ts_data, aes(x = get(paste0("rainfall_lag", optimal_lag)), y = cases)) +
         
         <h3>Step 1: Simple Linear Regression</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Predict malaria cases based on rainfall
 simple_model <- lm(cases ~ rainfall, data = malaria_data)
 
@@ -422,7 +422,7 @@ ggplot(malaria_data, aes(x = rainfall, y = cases)) +
     y = "Number of Cases"
   ) +
   theme_minimal()
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -437,7 +437,7 @@ ggplot(malaria_data, aes(x = rainfall, y = cases)) +
         
         <h3>Step 2: Multiple Linear Regression</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Predict malaria cases based on multiple variables
 multiple_model <- lm(cases ~ rainfall + temperature + humidity + population_density, 
                     data = malaria_data)
@@ -470,7 +470,7 @@ ggplot(malaria_data, aes(x = predicted_multi, y = cases)) +
     y = "Actual Cases"
   ) +
   theme_minimal()
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -486,7 +486,7 @@ ggplot(malaria_data, aes(x = predicted_multi, y = cases)) +
         
         <h3>Step 3: Categorical Predictors in Regression</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Include categorical variables in the regression model
 categorical_model <- lm(cases ~ rainfall + temperature + region + season, 
                        data = malaria_data)
@@ -514,7 +514,7 @@ ggplot(region_df, aes(x = region, y = fit, ymin = lower, ymax = upper)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
@@ -530,7 +530,7 @@ ggplot(region_df, aes(x = region, y = fit, ymin = lower, ymax = upper)) +
         
         <h3>Step 4: Interaction Terms in Regression</h3>
         <div class="r-code">
-            <code>
+            <pre><code>
 # Include interaction between rainfall and season
 interaction_model <- lm(cases ~ rainfall * season + temperature + region, 
                        data = malaria_data)
@@ -557,7 +557,7 @@ ggplot(interaction_df, aes(x = rainfall, y = fit, color = season)) +
     fill = "Season"
   ) +
   theme_minimal()
-            </code>
+            </code></pre>
         </div>
         
         <div class="explanation">
