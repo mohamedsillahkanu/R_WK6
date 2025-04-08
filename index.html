@@ -7,24 +7,38 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <button class="sidebar-toggle" id="sidebar-toggle">Menu</button>    
+    <button class="sidebar-toggle" id="sidebar-toggle">Menu</button>
+    
+    <div class="sidebar" id="sidebar">
+        <h3>Course Navigation</h3>
+        <ul>
+            <li class="menu-item">
+                <a href="#week6">📅 Week 6: Statistical Analysis</a>
+                <ul class="sub-menu">
+                    <li><a href="#t-tests">T-tests & ANOVA</a></li>
+                    <li><a href="#correlation">Correlation Analysis</a></li>
+                    <li><a href="#regression">Linear Regression Models</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    
     <div class="container">
         <h1 id="week6">📅 Week 6: Statistical Analysis for Malaria Data</h1>
         
         <p>This week, we will:<br>
-        ✅ <strong>Compare malaria rates between groups</strong> using t-tests and ANOVA<br>
-        ✅ <strong>Identify relationships between variables</strong> using correlation analysis<br>
-        ✅ <strong>Build predictive models</strong> using linear regression<br>
-        ✅ <strong>Create statistical reports</strong> with proper interpretation of results</p>
+        ✅ <strong>Compare malaria data between groups</strong> using t-tests and ANOVA<br>
+        ✅ <strong>Examine relationships between variables</strong> using correlation analysis<br>
+        ✅ <strong>Build predictive models</strong> using linear regression (<code>lm()</code>)</p>
         
         <hr>
         
-        <h2 id="hypothesis-testing">1️⃣ Hypothesis Testing for Malaria Data</h2>
+        <h2 id="t-tests">1️⃣ T-tests and ANOVA for Comparing Malaria Data</h2>
         
-        <h3>Why Conduct Hypothesis Tests?</h3>
-        <p>📌 <strong>Hypothesis testing</strong> helps determine if observed differences in malaria rates between groups (e.g., regions, treatment groups, time periods) are statistically significant or likely due to random chance.</p>
+        <h3>Why Use Statistical Tests?</h3>
+        <p>📌 <strong>Statistical tests</strong> help determine whether observed differences between groups are statistically significant or likely due to random chance.</p>
         
-        <h3>Step 1: Conducting a Two-Sample t-test</h3>
+        <h3>Step 1: Independent Samples T-test</h3>
         <div class="r-code">
             <code>
 # Load required packages
@@ -35,468 +49,377 @@ library(ggplot2)
 malaria_data <- read.csv("malaria_data.csv")
 
 # Compare malaria cases between urban and rural areas
-urban_cases <- filter(malaria_data, area_type == "Urban")$cases
-rural_cases <- filter(malaria_data, area_type == "Rural")$cases
+urban_cases <- malaria_data %>% 
+  filter(area_type == "Urban") %>% 
+  pull(cases)
 
-# Visualize the data with boxplots before testing
-ggplot(malaria_data, aes(x = area_type, y = cases, fill = area_type)) +
-  geom_boxplot() +
-  labs(
-    title = "Distribution of Malaria Cases by Area Type",
-    x = "Area Type",
-    y = "Number of Cases"
-  ) +
-  theme_minimal()
+rural_cases <- malaria_data %>% 
+  filter(area_type == "Rural") %>% 
+  pull(cases)
 
-# Perform t-test
+# Conduct t-test
 t_test_result <- t.test(urban_cases, rural_cases)
 
-# Print the results
 print(t_test_result)
 
-# Interpret the results
-alpha <- 0.05
-if(t_test_result$p.value < alpha) {
-  cat("There is a statistically significant difference in malaria cases between urban and rural areas (p =", 
-      round(t_test_result$p.value, 4), ").\n")
-} else {
-  cat("There is no statistically significant difference in malaria cases between urban and rural areas (p =", 
-      round(t_test_result$p.value, 4), ").\n")
-}
+# Visualize the comparison
+area_comparison <- malaria_data %>%
+  group_by(area_type) %>%
+  summarise(
+    mean_cases = mean(cases, na.rm = TRUE),
+    se = sd(cases, na.rm = TRUE) / sqrt(n())
+  )
+
+ggplot(area_comparison, aes(x = area_type, y = mean_cases, fill = area_type)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_cases - se, ymax = mean_cases + se), width = 0.2) +
+  labs(
+    title = "Comparison of Malaria Cases: Urban vs Rural Areas",
+    subtitle = paste("p-value =", round(t_test_result$p.value, 4)),
+    x = "Area Type",
+    y = "Mean Number of Cases"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
             <p>✔ <code>t.test()</code> compares the means of two independent groups<br>
-            ✔ The null hypothesis (H₀) is that there is no difference between means<br>
-            ✔ The alternative hypothesis (H₁) is that there is a difference<br>
-            ✔ If p-value < α (typically 0.05), we reject the null hypothesis</p>
+            ✔ The p-value indicates whether the difference is statistically significant<br>
+            ✔ By convention, p < 0.05 is considered statistically significant<br>
+            ✔ Error bars on the plot show the standard error of the mean</p>
         </div>
         
         <hr>
         
-        <h3>Step 2: Paired t-tests for Before-After Comparisons</h3>
+        <h3>Step 2: Paired Samples T-test</h3>
         <div class="r-code">
             <code>
-# Compare malaria cases before and after an intervention
-pre_intervention <- malaria_data %>%
-  filter(period == "Pre-intervention") %>%
-  select(site_id, cases)
+# Compare pre-intervention and post-intervention malaria cases
+# This assumes we have paired data (same locations before and after intervention)
 
-post_intervention <- malaria_data %>%
-  filter(period == "Post-intervention") %>%
-  select(site_id, cases)
-
-# Merge the data
-intervention_data <- inner_join(
-  pre_intervention, post_intervention,
-  by = "site_id",
-  suffix = c("_pre", "_post")
+# Create a synthetic example if your data doesn't have this structure
+intervention_data <- data.frame(
+  location = paste0("Site", 1:30),
+  pre_intervention = rpois(30, lambda = 50),  # Random Poisson data
+  post_intervention = rpois(30, lambda = 35)   # With lower mean
 )
 
-# Visualize before-after comparison
-intervention_long <- intervention_data %>%
-  tidyr::pivot_longer(
-    cols = c(cases_pre, cases_post),
-    names_to = "period",
-    values_to = "cases"
-  ) %>%
-  mutate(period = ifelse(period == "cases_pre", "Pre-intervention", "Post-intervention"))
-
-ggplot(intervention_long, aes(x = period, y = cases)) +
-  geom_boxplot(fill = "lightblue") +
-  geom_line(aes(group = site_id), alpha = 0.3) +
-  labs(
-    title = "Malaria Cases Before and After Intervention",
-    x = "Period",
-    y = "Number of Cases"
-  ) +
-  theme_minimal()
-
-# Perform paired t-test
-paired_test <- t.test(
-  intervention_data$cases_pre,
-  intervention_data$cases_post,
+# Conduct paired t-test
+paired_t_test <- t.test(
+  intervention_data$pre_intervention, 
+  intervention_data$post_intervention, 
   paired = TRUE
 )
 
-print(paired_test)
+print(paired_t_test)
 
-# Calculate percent reduction
-mean_reduction <- mean(intervention_data$cases_pre - intervention_data$cases_post)
-percent_reduction <- (mean_reduction / mean(intervention_data$cases_pre)) * 100
+# Visualize the paired data
+intervention_data$difference <- intervention_data$pre_intervention - intervention_data$post_intervention
 
-cat("Mean reduction in cases:", round(mean_reduction, 2), 
-    "cases (", round(percent_reduction, 1), "% reduction)\n")
+ggplot(intervention_data, aes(x = location, y = difference)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Difference in Malaria Cases (Pre - Post Intervention)",
+    subtitle = paste("p-value =", round(paired_t_test$p.value, 4)),
+    x = "Location",
+    y = "Difference in Cases"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8))
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ <code>paired = TRUE</code> tells R that observations are from the same sites (before & after)<br>
-            ✔ Paired tests have greater statistical power when comparing repeated measurements<br>
-            ✔ The visualization with lines connecting pre/post values shows site-specific changes<br>
-            ✔ We can also quantify the practical significance with the percent reduction</p>
+            <p>✔ Paired t-tests are used when we have matched observations (e.g., before and after measurements)<br>
+            ✔ <code>paired = TRUE</code> specifies that we're using a paired test<br>
+            ✔ This test is more powerful than an independent t-test when we have natural pairing<br>
+            ✔ The plot shows the difference for each location, with positive values indicating a reduction in cases</p>
         </div>
         
         <hr>
         
-        <h3>Step 3: One-Way ANOVA for Comparing Multiple Groups</h3>
+        <h3>Step 3: One-way ANOVA</h3>
         <div class="r-code">
             <code>
 # Compare malaria cases across different regions
-ggplot(malaria_data, aes(x = region, y = cases, fill = region)) +
-  geom_boxplot() +
-  labs(
-    title = "Distribution of Malaria Cases by Region",
-    x = "Region",
-    y = "Number of Cases"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# Perform one-way ANOVA
 anova_result <- aov(cases ~ region, data = malaria_data)
 
-# Print the ANOVA summary
-summary(anova_result)
+# Summary of the ANOVA results
+anova_summary <- summary(anova_result)
+print(anova_summary)
 
-# If ANOVA is significant, perform post-hoc tests to identify which groups differ
-if(summary(anova_result)[[1]][["Pr(>F)"]][1] < 0.05) {
-  cat("The ANOVA test shows significant differences between regions.\n")
-  cat("Performing Tukey's HSD post-hoc test to identify which regions differ:\n\n")
-  
-  # Tukey's Honest Significant Difference test
-  tukey_result <- TukeyHSD(anova_result)
-  print(tukey_result)
-  
-  # Visualize the Tukey HSD results
-  plot(tukey_result)
-} else {
-  cat("The ANOVA test shows no significant differences between regions.")
-}
+# Post-hoc test (Tukey's HSD) to identify which regions differ
+tukey_result <- TukeyHSD(anova_result)
+print(tukey_result)
+
+# Visualize mean cases by region
+region_summary <- malaria_data %>%
+  group_by(region) %>%
+  summarise(
+    mean_cases = mean(cases, na.rm = TRUE),
+    se = sd(cases, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  arrange(desc(mean_cases))
+
+ggplot(region_summary, aes(x = reorder(region, -mean_cases), y = mean_cases, fill = region)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_cases - se, ymax = mean_cases + se), width = 0.2) +
+  labs(
+    title = "Comparison of Malaria Cases Across Regions",
+    subtitle = paste("ANOVA p-value =", round(anova_summary[[1]]$"Pr(>F)"[1], 4)),
+    x = "Region",
+    y = "Mean Number of Cases"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ ANOVA (Analysis of Variance) compares means across multiple groups<br>
-            ✔ <code>aov()</code> fits the ANOVA model<br>
-            ✔ If the overall ANOVA is significant, we perform post-hoc tests to identify specific differences<br>
-            ✔ <code>TukeyHSD()</code> performs pairwise comparisons with correction for multiple testing</p>
+            <p>✔ ANOVA (Analysis of Variance) compares means across more than two groups<br>
+            ✔ <code>aov()</code> performs the ANOVA test<br>
+            ✔ A significant p-value indicates that at least one group differs from the others<br>
+            ✔ <code>TukeyHSD()</code> performs pairwise comparisons to identify which specific groups differ</p>
         </div>
         
         <hr>
         
-        <h3>Step 4: Non-parametric Alternatives</h3>
+        <h3>Step 4: Two-way ANOVA</h3>
         <div class="r-code">
             <code>
-# Check if data is normally distributed
-shapiro_test <- shapiro.test(malaria_data$cases)
-print(shapiro_test)
-
-# If p < 0.05, data is not normally distributed, use non-parametric tests
-if(shapiro_test$p.value < 0.05) {
-  cat("Data is not normally distributed. Using non-parametric tests.\n\n")
-  
-  # For two groups, use Wilcoxon rank-sum test (Mann-Whitney U test)
-  wilcox_result <- wilcox.test(
-    filter(malaria_data, area_type == "Urban")$cases,
-    filter(malaria_data, area_type == "Rural")$cases
-  )
-  
-  print(wilcox_result)
-  
-  # For multiple groups, use Kruskal-Wallis test (non-parametric ANOVA)
-  kruskal_result <- kruskal.test(cases ~ region, data = malaria_data)
-  print(kruskal_result)
-  
-  # If Kruskal-Wallis is significant, perform Dunn's test for pairwise comparisons
-  if(kruskal_result$p.value < 0.05) {
-    if(!require(dunn.test)) {
-      install.packages("dunn.test")
-      library(dunn.test)
-    }
-    
-    dunn_result <- dunn.test(
-      x = malaria_data$cases,
-      g = malaria_data$region,
-      method = "bonferroni"
+# Compare malaria cases by both region and season
+# First, create a season variable if it doesn't exist
+malaria_data <- malaria_data %>%
+  mutate(
+    season = case_when(
+      month %in% c(3, 4, 5) ~ "Spring",
+      month %in% c(6, 7, 8) ~ "Summer",
+      month %in% c(9, 10, 11) ~ "Fall",
+      month %in% c(12, 1, 2) ~ "Winter"
     )
-  }
-} else {
-  cat("Data appears to be normally distributed. Parametric tests are appropriate.\n")
-}
+  )
+
+# Perform two-way ANOVA
+two_way_anova <- aov(cases ~ region * season, data = malaria_data)
+two_way_summary <- summary(two_way_anova)
+print(two_way_summary)
+
+# Visualize the interaction between region and season
+interaction_plot <- malaria_data %>%
+  group_by(region, season) %>%
+  summarise(mean_cases = mean(cases, na.rm = TRUE), .groups = "drop")
+
+ggplot(interaction_plot, aes(x = season, y = mean_cases, group = region, color = region)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  labs(
+    title = "Interaction Between Region and Season on Malaria Cases",
+    x = "Season",
+    y = "Mean Number of Cases",
+    color = "Region"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ <code>shapiro.test()</code> checks if data follows a normal distribution<br>
-            ✔ Non-parametric tests are more appropriate when data is skewed or has outliers<br>
-            ✔ <code>wilcox.test()</code> is the non-parametric alternative to the t-test<br>
-            ✔ <code>kruskal.test()</code> is the non-parametric alternative to ANOVA<br>
-            ✔ <code>dunn.test()</code> provides pairwise comparisons for Kruskal-Wallis</p>
+            <p>✔ Two-way ANOVA examines the effects of two categorical variables and their interaction<br>
+            ✔ <code>region * season</code> tests for main effects of each variable and their interaction<br>
+            ✔ The interaction term tests whether the effect of region depends on the season (and vice versa)<br>
+            ✔ The interaction plot shows how seasonal patterns may differ across regions</p>
         </div>
         
         <hr>
         
         <h2 id="correlation">2️⃣ Correlation Analysis for Malaria Data</h2>
         
-        <h3>Step 1: Basic Correlation Between Variables</h3>
+        <h3>Step 1: Basic Correlation Analysis</h3>
         <div class="r-code">
             <code>
-# Check correlation between malaria cases and environmental factors
-# First, let's create a correlation matrix
-correlation_vars <- c("cases", "rainfall_mm", "temperature_avg", "humidity_percent")
-correlation_data <- malaria_data %>% select(all_of(correlation_vars))
+# Examine the relationship between rainfall and malaria cases
+# Assuming we have monthly rainfall data in our dataset
 
-# Calculate correlation matrix
-correlation_matrix <- cor(correlation_data, use = "pairwise.complete.obs")
-print(correlation_matrix)
+# Calculate correlation coefficient
+correlation <- cor(malaria_data$rainfall, malaria_data$cases, 
+                  method = "pearson", use = "complete.obs")
 
-# Visualize with a correlation plot
-if(!require(corrplot)) {
-  install.packages("corrplot")
-  library(corrplot)
-}
+cat("Correlation between rainfall and malaria cases:", round(correlation, 3), "\n")
 
-corrplot(correlation_matrix, 
-         method = "circle", 
-         type = "upper", 
-         tl.col = "black",
-         tl.srt = 45,
-         addCoef.col = "black")
+# Test significance of correlation
+cor_test <- cor.test(malaria_data$rainfall, malaria_data$cases)
+print(cor_test)
 
-# Test statistical significance of correlations
-correlation_test <- cor.test(malaria_data$cases, malaria_data$rainfall_mm)
-print(correlation_test)
-
-# Interpret the result
-if(correlation_test$p.value < 0.05) {
-  cat("There is a statistically significant correlation between malaria cases and rainfall (r =", 
-      round(correlation_test$estimate, 2), 
-      ", p =", round(correlation_test$p.value, 4), ").\n")
-} else {
-  cat("There is no statistically significant correlation between malaria cases and rainfall (r =", 
-      round(correlation_test$estimate, 2), 
-      ", p =", round(correlation_test$p.value, 4), ").\n")
-}
-            </code>
-        </div>
-        
-        <div class="explanation">
-            <h4>🔍 Explanation:</h4>
-            <p>✔ <code>cor()</code> calculates Pearson correlation coefficients between variables<br>
-            ✔ <code>use = "pairwise.complete.obs"</code> handles missing values by using all available pairs<br>
-            ✔ <code>corrplot()</code> creates a visual representation of the correlation matrix<br>
-            ✔ <code>cor.test()</code> tests if the correlation is significantly different from zero</p>
-        </div>
-        
-        <hr>
-        
-        <h3>Step 2: Visualizing Correlations with Scatter Plots</h3>
-        <div class="r-code">
-            <code>
-# Create scatter plots for key correlations
-ggplot(malaria_data, aes(x = rainfall_mm, y = cases)) +
+# Visualize the relationship
+ggplot(malaria_data, aes(x = rainfall, y = cases)) +
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm", color = "blue") +
   labs(
     title = "Relationship Between Rainfall and Malaria Cases",
+    subtitle = paste("Correlation =", round(correlation, 3), 
+                    ", p-value =", round(cor_test$p.value, 4)),
     x = "Monthly Rainfall (mm)",
     y = "Number of Malaria Cases"
   ) +
   theme_minimal()
-
-# Create a matrix of scatter plots for multiple variables
-if(!require(GGally)) {
-  install.packages("GGally")
-  library(GGally)
-}
-
-ggpairs(correlation_data, 
-        columns = 1:4,
-        title = "Correlation Matrix for Malaria and Environmental Factors")
-
-# Create a scatter plot with temporal information
-ggplot(malaria_data, aes(x = rainfall_mm, y = cases, color = factor(year))) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(
-    title = "Rainfall vs. Malaria Cases by Year",
-    x = "Monthly Rainfall (mm)",
-    y = "Number of Malaria Cases",
-    color = "Year"
-  ) +
-  theme_minimal()
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ Scatter plots visually show the relationship between two variables<br>
-            ✔ <code>geom_smooth(method = "lm")</code> adds a linear trend line<br>
-            ✔ <code>ggpairs()</code> creates a matrix of scatter plots, histograms, and correlation coefficients<br>
-            ✔ Adding color by year shows if the relationship changes over time</p>
+            <p>✔ <code>cor()</code> calculates the correlation coefficient (ranging from -1 to 1)<br>
+            ✔ <code>method = "pearson"</code> specifies Pearson's correlation (linear relationship)<br>
+            ✔ <code>cor.test()</code> assesses the statistical significance of the correlation<br>
+            ✔ The scatter plot with trend line visualizes the relationship between variables</p>
         </div>
         
         <hr>
         
-        <h3>Step 3: Time-Lagged Correlations</h3>
+        <h3>Step 2: Multiple Correlations</h3>
         <div class="r-code">
             <code>
-# Analyze time-lagged correlations (e.g., rainfall affecting malaria cases with a delay)
-# First, ensure data is sorted by location and time
-time_series_data <- malaria_data %>%
-  arrange(site_id, year, month) %>%
-  group_by(site_id) %>%
-  mutate(
-    rainfall_lag1 = lag(rainfall_mm, 1),  # Previous month
-    rainfall_lag2 = lag(rainfall_mm, 2),  # Two months ago
-    rainfall_lag3 = lag(rainfall_mm, 3)   # Three months ago
-  ) %>%
-  ungroup()
+# Install and load the corrplot package for better visualization
+install.packages("corrplot")
+library(corrplot)
 
-# Calculate correlations at different lags
-lag_correlations <- data.frame(
-  lag = c(0, 1, 2, 3),
-  correlation = c(
-    cor(time_series_data$cases, time_series_data$rainfall_mm, use = "pairwise.complete.obs"),
-    cor(time_series_data$cases, time_series_data$rainfall_lag1, use = "pairwise.complete.obs"),
-    cor(time_series_data$cases, time_series_data$rainfall_lag2, use = "pairwise.complete.obs"),
-    cor(time_series_data$cases, time_series_data$rainfall_lag3, use = "pairwise.complete.obs")
-  )
+# Select numerical variables for correlation analysis
+numeric_vars <- malaria_data %>%
+  select(cases, deaths, rainfall, temperature, humidity, population_density)
+
+# Calculate correlation matrix
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+print(cor_matrix)
+
+# Create correlation plot
+corrplot(cor_matrix, method = "circle", type = "upper", 
+         tl.col = "black", tl.srt = 45, 
+         addCoef.col = "black", number.cex = 0.7,
+         title = "Correlation Matrix of Malaria Variables")
+
+# Alternative correlation visualization
+install.packages("ggcorrplot")
+library(ggcorrplot)
+
+ggcorrplot(cor_matrix, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3,
+           colors = c("#6D9EC1", "white", "#E46726"),
+           title = "Correlation Matrix of Malaria Variables")
+            </code>
+        </div>
+        
+        <div class="explanation">
+            <h4>🔍 Explanation:</h4>
+            <p>✔ A correlation matrix shows relationships between multiple variables<br>
+            ✔ <code>corrplot()</code> creates a visual representation of the correlation matrix<br>
+            ✔ Blue circles indicate positive correlations, red circles indicate negative correlations<br>
+            ✔ The size of the circle reflects the strength of the correlation</p>
+        </div>
+        
+        <hr>
+        
+        <h3>Step 3: Time-lagged Correlation</h3>
+        <div class="r-code">
+            <code>
+# Investigate time-lagged effects of rainfall on malaria cases
+# Malaria cases often lag behind rainfall by 1-2 months
+
+# Prepare time series data
+ts_data <- malaria_data %>%
+  arrange(year, month) %>%
+  select(year, month, cases, rainfall) %>%
+  mutate(date = as.Date(paste(year, month, "01", sep = "-")))
+
+# Create lagged variables
+max_lag <- 4  # Check up to 4 months of lag
+lag_correlations <- numeric(max_lag)
+
+for (i in 1:max_lag) {
+  ts_data[[paste0("rainfall_lag", i)]] <- lag(ts_data$rainfall, i)
+  lag_correlations[i] <- cor(ts_data$cases, ts_data[[paste0("rainfall_lag", i)]], 
+                           use = "complete.obs")
+}
+
+# Identify the optimal lag
+optimal_lag <- which.max(abs(lag_correlations))
+cat("Optimal lag:", optimal_lag, "months\n")
+cat("Correlation at optimal lag:", round(lag_correlations[optimal_lag], 3), "\n")
+
+# Plot the correlations at different lags
+lag_df <- data.frame(
+  Lag = 1:max_lag,
+  Correlation = lag_correlations
 )
 
-print(lag_correlations)
-
-# Visualize lag correlations
-ggplot(lag_correlations, aes(x = lag, y = correlation)) +
-  geom_line(color = "blue", size = 1) +
-  geom_point(color = "blue", size = 3) +
+ggplot(lag_df, aes(x = Lag, y = Correlation)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   labs(
-    title = "Correlation Between Malaria Cases and Rainfall at Different Time Lags",
-    x = "Lag (Months)",
-    y = "Correlation Coefficient (r)"
+    title = "Correlation Between Malaria Cases and Lagged Rainfall",
+    x = "Lag (months)",
+    y = "Correlation Coefficient"
   ) +
+  scale_x_continuous(breaks = 1:max_lag) +
   theme_minimal()
 
-# Identify the lag with the strongest correlation
-max_lag <- lag_correlations$lag[which.max(abs(lag_correlations$correlation))]
-max_cor <- lag_correlations$correlation[which.max(abs(lag_correlations$correlation))]
-
-cat("The strongest correlation between rainfall and malaria cases occurs with a lag of", 
-    max_lag, "months (r =", round(max_cor, 2), ").\n")
+# Visualize the relationship with optimal lag
+ggplot(ts_data, aes(x = get(paste0("rainfall_lag", optimal_lag)), y = cases)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(
+    title = paste("Relationship Between Malaria Cases and Rainfall with", 
+                 optimal_lag, "Month Lag"),
+    x = paste("Rainfall", optimal_lag, "Months Earlier (mm)"),
+    y = "Number of Malaria Cases"
+  ) +
+  theme_minimal()
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ <code>lag()</code> function creates variables with values from previous time points<br>
-            ✔ Time-lagged correlations help identify delayed effects of environmental factors<br>
-            ✔ This is particularly important for malaria as mosquito development takes time<br>
-            ✔ The lag with the strongest correlation suggests the time delay between rainfall and malaria cases</p>
+            <p>✔ Time-lagged correlation accounts for delayed effects of environmental factors<br>
+            ✔ <code>lag()</code> creates variables that are shifted in time<br>
+            ✔ Testing multiple lag periods helps identify the optimal time delay<br>
+            ✔ For malaria, rainfall often affects case counts with a lag due to mosquito breeding cycles</p>
         </div>
         
         <hr>
         
-        <h3>Step 4: Correlation with Categorical Variables</h3>
-        <div class="r-code">
-            <code>
-# Examine relationships between categorical variables and malaria cases
-# For binary variables, we can use point-biserial correlation (special case of Pearson)
-
-# First, convert categorical variables to numeric if needed
-malaria_data$intervention_numeric <- ifelse(malaria_data$intervention == "Yes", 1, 0)
-
-# Calculate point-biserial correlation
-intervention_cor <- cor.test(malaria_data$cases, malaria_data$intervention_numeric)
-print(intervention_cor)
-
-# For categorical variables with multiple levels, use ANOVA or boxplots
-ggplot(malaria_data, aes(x = socioeconomic_status, y = cases, fill = socioeconomic_status)) +
-  geom_boxplot() +
-  labs(
-    title = "Malaria Cases by Socioeconomic Status",
-    x = "Socioeconomic Status",
-    y = "Number of Cases"
-  ) +
-  theme_minimal()
-
-# Use eta-squared to quantify the strength of relationship
-if(!require(effectsize)) {
-  install.packages("effectsize")
-  library(effectsize)
-}
-
-anova_model <- aov(cases ~ socioeconomic_status, data = malaria_data)
-eta_squared_result <- eta_squared(anova_model)
-print(eta_squared_result)
-
-# Interpretation:
-# η² < 0.01: Very small effect
-# 0.01 ≤ η² < 0.06: Small effect
-# 0.06 ≤ η² < 0.14: Medium effect
-# η² ≥ 0.14: Large effect
-            </code>
-        </div>
-        
-        <div class="explanation">
-            <h4>🔍 Explanation:</h4>
-            <p>✔ For binary categorical variables, point-biserial correlation (a special case of Pearson correlation) can be used<br>
-            ✔ For categorical variables with multiple levels, ANOVA and visualization with boxplots are appropriate<br>
-            ✔ <code>eta_squared()</code> quantifies the proportion of variance in the outcome variable that is explained by the categorical variable<br>
-            ✔ This provides a standardized effect size measure for categorical predictors</p>
-        </div>
-        
-        <hr>
-        
-        <h2 id="regression">3️⃣ Linear Regression for Malaria Data</h2>
-        
-        <h3>Why Use Regression?</h3>
-        <p>📌 <strong>Regression analysis</strong> allows us to model the relationship between malaria cases and potential predictor variables, identify significant factors influencing malaria transmission, and make predictions based on those relationships.</p>
+        <h2 id="regression">3️⃣ Linear Regression Models for Malaria Data</h2>
         
         <h3>Step 1: Simple Linear Regression</h3>
         <div class="r-code">
             <code>
-# Simple linear regression with one predictor
 # Predict malaria cases based on rainfall
-simple_model <- lm(cases ~ rainfall_mm, data = malaria_data)
+simple_model <- lm(cases ~ rainfall, data = malaria_data)
 
-# Examine the model summary
+# View model summary
 summary(simple_model)
 
-# Visualize the relationship
-ggplot(malaria_data, aes(x = rainfall_mm, y = cases)) +
-  geom_point() +
-  geom_smooth(method = "lm", color = "blue") +
-  labs(
-    title = "Linear Regression: Malaria Cases vs. Rainfall",
-    x = "Monthly Rainfall (mm)",
-    y = "Number of Malaria Cases"
-  ) +
-  theme_minimal()
+# Extract and interpret coefficients
+coef_rainfall <- coef(simple_model)["rainfall"]
+cat("For each 1mm increase in rainfall, malaria cases change by", 
+    round(coef_rainfall, 2), "\n")
 
-# Make predictions with the model
-new_data <- data.frame(rainfall_mm = c(50, 100, 150, 200, 250))
-predictions <- predict(simple_model, newdata = new_data, interval = "confidence")
+# Make predictions
+malaria_data$predicted_cases <- predict(simple_model, newdata = malaria_data)
 
-prediction_df <- cbind(new_data, predictions)
-print(prediction_df)
-
-# Plot with prediction intervals
-ggplot(malaria_data, aes(x = rainfall_mm, y = cases)) +
+# Visualize actual vs predicted values
+ggplot(malaria_data, aes(x = rainfall, y = cases)) +
   geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", fill = "lightblue") +
-  geom_line(data = prediction_df, aes(y = fit), color = "red", size = 1) +
-  geom_ribbon(data = prediction_df, aes(y = fit, ymin = lwr, ymax = upr), 
-              alpha = 0.2, fill = "red") +
+  geom_line(aes(y = predicted_cases), color = "red", size = 1) +
   labs(
-    title = "Linear Regression with Confidence Intervals",
-    x = "Monthly Rainfall (mm)",
-    y = "Number of Malaria Cases"
+    title = "Simple Linear Regression: Malaria Cases vs Rainfall",
+    subtitle = paste("R² =", round(summary(simple_model)$r.squared, 3)),
+    x = "Rainfall (mm)",
+    y = "Number of Cases"
   ) +
   theme_minimal()
             </code>
@@ -505,9 +428,9 @@ ggplot(malaria_data, aes(x = rainfall_mm, y = cases)) +
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
             <p>✔ <code>lm()</code> fits a linear regression model<br>
-            ✔ <code>summary(model)</code> provides detailed statistics including coefficients, p-values, and R-squared<br>
-            ✔ <code>predict(model, newdata, interval = "confidence")</code> generates predictions with confidence intervals<br>
-            ✔ The slope coefficient represents the expected change in malaria cases for a 1 mm increase in rainfall</p>
+            ✔ <code>summary()</code> provides key statistics including coefficients, p-values, and R²<br>
+            ✔ The coefficient represents the change in cases for each unit increase in rainfall<br>
+            ✔ R² indicates the proportion of variance in cases explained by rainfall</p>
         </div>
         
         <hr>
@@ -515,551 +438,148 @@ ggplot(malaria_data, aes(x = rainfall_mm, y = cases)) +
         <h3>Step 2: Multiple Linear Regression</h3>
         <div class="r-code">
             <code>
-# Multiple linear regression with several predictors
-multiple_model <- lm(
-  cases ~ rainfall_mm + temperature_avg + humidity_percent + population_density,
-  data = malaria_data
-)
+# Predict malaria cases based on multiple variables
+multiple_model <- lm(cases ~ rainfall + temperature + humidity + population_density, 
+                    data = malaria_data)
 
-# Examine the model summary
+# View model summary
 summary(multiple_model)
 
-# Visualize coefficients
-if(!require(jtools)) {
-  install.packages("jtools")
-  library(jtools)
-}
+# Compare with simpler model
+anova(simple_model, multiple_model)
 
-plot_summs(multiple_model, scale = TRUE, plot.distributions = TRUE)
+# Calculate variance inflation factors to check for multicollinearity
+install.packages("car")
+library(car)
+vif(multiple_model)
 
-# Check for multicollinearity
-if(!require(car)) {
-  install.packages("car")
-  library(car)
-}
+# Create partial regression plots
+avPlots(multiple_model)
 
-vif_results <- vif(multiple_model)
-print(vif_results)
+# Make predictions with the multiple regression model
+malaria_data$predicted_multi <- predict(multiple_model, newdata = malaria_data)
 
-# Interpret VIF results:
-cat("Variables with VIF > 5 may have problematic multicollinearity.\n")
-            </code>
-        </div>
-        
-        <div class="explanation">
-            <h4>🔍 Explanation:</h4>
-            <p>✔ Multiple regression includes several predictor variables in the same model<br>
-            ✔ <code>plot_summs()</code> visualizes coefficient estimates with confidence intervals<br>
-            ✔ <code>scale = TRUE</code> standardizes coefficients to compare their relative importance<br>
-            ✔ <code>vif()</code> calculates Variance Inflation Factors to detect multicollinearity<br>
-            ✔ Multicollinearity occurs when predictors are highly correlated with each other</p>
-        </div>
-        
-        <hr>
-        
-        <h3>Step 3: Model Selection and Comparison</h3>
-        <div class="r-code">
-            <code>
-# Build and compare different models
-model1 <- lm(cases ~ rainfall_mm, data = malaria_data)
-model2 <- lm(cases ~ rainfall_mm + temperature_avg, data = malaria_data)
-model3 <- lm(cases ~ rainfall_mm + temperature_avg + humidity_percent, data = malaria_data)
-model4 <- lm(cases ~ rainfall_mm + temperature_avg + humidity_percent + population_density, data = malaria_data)
-
-# Compare models using AIC (Akaike Information Criterion)
-models_AIC <- AIC(model1, model2, model3, model4)
-print(models_AIC)
-
-# Compare models using anova (Analysis of Variance)
-anova_comparison <- anova(model1, model2, model3, model4)
-print(anova_comparison)
-
-# Automated model selection using step function
-# Start with full model and perform backward selection
-step_model <- step(model4, direction = "backward")
-summary(step_model)
-
-# Compare R-squared values
-models_rsquared <- data.frame(
-  Model = c("Model 1 (Rainfall)", 
-            "Model 2 (Rainfall + Temperature)", 
-            "Model 3 (Rainfall + Temperature + Humidity)",
-            "Model 4 (All variables)"),
-  R_squared = c(
-    summary(model1)$r.squared,
-    summary(model2)$r.squared,
-    summary(model3)$r.squared,
-    summary(model4)$r.squared
-  ),
-  Adj_R_squared = c(
-    summary(model1)$adj.r.squared,
-    summary(model2)$adj.r.squared,
-    summary(model3)$adj.r.squared,
-    summary(model4)$adj.r.squared
-  )
-)
-
-print(models_rsquared)
-            </code>
-        </div>
-        
-        <div class="explanation">
-            <h4>🔍 Explanation:</h4>
-            <p>✔ Model selection involves comparing different combinations of predictors<br>
-            ✔ <code>AIC()</code> calculates the Akaike Information Criterion - lower values indicate better models<br>
-            ✔ <code>anova()</code> tests if adding variables significantly improves the model<br>
-            ✔ <code>step()</code> performs automated model selection based on AIC<br>
-            ✔ Adjusted R-squared accounts for the number of predictors and helps prevent overfitting</p>
-        </div>
-        
-        <hr>
-        
-        <h3>Step 4: Model Diagnostics and Assumptions</h3>
-        <div class="r-code">
-            <code>
-# Check regression assumptions
-par(mfrow = c(2, 2))
-plot(step_model)
-par(mfrow = c(1, 1))
-
-# Check for normality of residuals
-shapiro.test(residuals(step_model))
-
-# Check for influential observations
-influence_measures <- influence.measures(step_model)
-influential_obs <- which(influence_measures$is.inf[, "cook.d"])
-cat("Potentially influential observations (rows):", influential_obs, "\n")
-
-# Robust regression if needed
-if(!require(MASS)) {
-  install.packages("MASS")
-  library(MASS)
-}
-
-# Robust regression is less affected by outliers
-robust_model <- rlm(cases ~ rainfall_mm + temperature_avg + humidity_percent, 
-                  data = malaria_data)
-summary(robust_model)
-
-# Compare coefficients between ordinary and robust regression
-coef_comparison <- data.frame(
-  Predictor = names(coef(step_model)),
-  OLS = coef(step_model),
-  Robust = c(coef(robust_model), NA)[1:length(coef(step_model))],  # Adjust length if different
-  row.names = NULL
-)
-
-print(coef_comparison)
-            </code>
-        </div>
-        
-        <div class="explanation">
-            <h4>🔍 Explanation:</h4>
-            <p>✔ Checking model assumptions is crucial for valid inference<br>
-            ✔ Diagnostic plots help identify issues with linearity, normality, and homoscedasticity<br>
-            ✔ <code>shapiro.test()</code> checks if residuals are normally distributed<br>
-            ✔ <code>influence.measures()</code> identifies influential observations that might skew results<br>
-            ✔ <code>rlm()</code> provides robust regression that is less sensitive to outliers</p>
-        </div>
-        
-        <hr>
-        
-        <h2 id="reporting">4️⃣ Creating Statistical Reports</h2>
-        
-        <h3>Step 1: Comprehensive Statistical Reports</h3>
-        <div class="r-code">
-            <code>
-# Example of an R Markdown statistical report structure
-
-# Title: "Analysis of Factors Affecting Malaria Transmission in Region X"
-# 
-# ## Executive Summary
-# 
-# This report analyzes the relationship between environmental factors and malaria cases in Region X during 2018-2022. Key findings show that rainfall has the strongest association with malaria incidence, with a lag period of approximately 2 months. Urban areas show significantly lower case rates than rural areas, and interventions have reduced cases by an average of 42%.
-# 
-# ## Methods
-# 
-# Data was collected from 32 health facilities across 4 districts. Statistical analysis included:
-# - Paired t-tests to compare pre/post intervention case counts
-# - Correlation analysis to examine relationships between environmental factors and malaria cases
-# - Multiple linear regression to identify significant predictors of malaria transmission
-# 
-# ```{r setup, include=FALSE}
-# knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-# library(dplyr)
-# library(ggplot2)
-# library(knitr)
-library(kableExtra)
-
-# Load data
-malaria_data <- read.csv("malaria_data.csv")
-
-# Perform analyses (code not shown here)
-```
-
-## Results
-
-### Comparison of Malaria Cases Between Urban and Rural Areas
-
-```{r urban-rural, fig.width=8, fig.height=4}
-# Create boxplot
-ggplot(malaria_data, aes(x = area_type, y = cases, fill = area_type)) +
-  geom_boxplot() +
+# Compare actual vs predicted values
+ggplot(malaria_data, aes(x = predicted_multi, y = cases)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
   labs(
-    title = "Distribution of Malaria Cases by Area Type",
-    x = "Area Type",
-    y = "Number of Cases"
+    title = "Multiple Regression: Actual vs Predicted Malaria Cases",
+    subtitle = paste("R² =", round(summary(multiple_model)$r.squared, 3)),
+    x = "Predicted Cases",
+    y = "Actual Cases"
   ) +
   theme_minimal()
-
-# T-test results (pre-computed)
-t_result <- list(p.value = 0.003, estimate = c(16.2, 47.8))
-```
-
-**Statistical Test Results:** There is a statistically significant difference in malaria cases between urban and rural areas (p = 0.003). Rural areas had an average of 47.8 cases per month, while urban areas had an average of 16.2 cases.
-
-### Relationship Between Environmental Factors and Malaria Cases
-
-```{r correlation-heatmap, fig.width=8, fig.height=6}
-# Display correlation matrix as a heatmap
-corrplot(correlation_matrix, 
-         method = "circle", 
-         type = "upper", 
-         tl.col = "black",
-         tl.srt = 45,
-         addCoef.col = "black")
-```
-
-**Key Findings:**
-- Rainfall shows the strongest correlation with malaria cases (r = 0.67, p < 0.001)
-- The effect of rainfall is strongest with a 2-month lag (r = 0.73, p < 0.001)
-- Temperature has a moderate positive correlation (r = 0.45, p < 0.001)
-- Humidity shows a weak correlation that is not statistically significant (r = 0.21, p = 0.08)
-
-### Predictive Model for Malaria Cases
-
-```{r regression-table}
-# Create a summary table of regression results
-coef_table <- data.frame(
-  Variable = c("(Intercept)", "rainfall_mm", "temperature_avg", "humidity_percent"),
-  Coefficient = c(-12.4, 0.18, 1.67, 0.08),
-  SE = c(5.6, 0.03, 0.57, 0.09),
-  p_value = c(0.031, 0.001, 0.005, 0.376),
-  VIF = c(NA, 1.3, 1.8, 1.4)
-)
-
-kable(coef_table, caption = "Multiple Regression Results (Outcome: Malaria Cases)")
-
-
-# Pre-computed model fit statistics
-r_squared <- 0.64
-adj_r_squared <- 0.61
-```
-
-**Model Interpretation:** The multiple regression model explains 64% of the variance in malaria cases (Adjusted R² = 0.61). Rainfall and temperature are significant predictors (p < 0.05), while humidity is not. Each 1 mm increase in monthly rainfall is associated with an increase of 0.18 malaria cases, holding other factors constant.
-
-## Discussion
-
-### Key Findings:
-
-1. Rainfall is a significant predictor of malaria cases. For each 1 mm increase in monthly rainfall, we expect an increase of approximately 0.18 cases, holding other factors constant.
-
-2. There is a significant difference in malaria cases between urban and rural areas, with rural areas showing higher case counts. This suggests that targeted interventions should prioritize rural communities.
-
-3. The model diagnostics suggest that the model assumptions are reasonably met.
-
-### Recommendations for Public Health Action:
-
-1. Time malaria prevention campaigns to coincide with or slightly precede periods of increased rainfall.
-
-2. Allocate resources differentially between urban and rural areas based on the observed differences in case burden.
-
-3. Continue monitoring environmental factors identified as significant predictors to improve early warning systems.
-
-### Limitations and Future Research:
-
-- The model explains 64% of the variance, indicating other unmeasured factors influence malaria transmission.
-- Longitudinal studies are needed to establish stronger causal relationships.
-- Incorporating spatial analysis could provide additional insights into transmission patterns.
-```
-
-<hr>
-        
-        <h3>Step 2: Visualizing Statistical Results</h3>
-        <div class="r-code">
-            <code>
-# Create more advanced visualizations of statistical results
-# Install and load specialized packages
-if(!require(ggpubr)) {
-  install.packages("ggpubr")
-  library(ggpubr)
-}
-
-if(!require(ggstatsplot)) {
-  install.packages("ggstatsplot")
-  library(ggstatsplot)
-}
-
-# Create a plot with statistical test results
-ggbetweenstats(
-  data = malaria_data,
-  x = area_type,
-  y = cases,
-  type = "p", # p for parametric (t-test)
-  plot.type = "box",
-  pairwise.comparisons = TRUE,
-  pairwise.display = "significant",
-  centrality.plotting = TRUE,
-  title = "Comparison of Malaria Cases by Area Type"
-)
-
-# Visualize correlation with statistical details
-ggscatterstats(
-  data = malaria_data,
-  x = rainfall_mm,
-  y = cases,
-  xlab = "Monthly Rainfall (mm)",
-  ylab = "Number of Malaria Cases",
-  title = "Correlation between Rainfall and Malaria Cases"
-)
-
-# Create a regression coefficient plot
-if(!require(sjPlot)) {
-  install.packages("sjPlot")
-  library(sjPlot)
-}
-
-# Plot regression coefficients with confidence intervals
-plot_model(step_model, 
-           show.values = TRUE, 
-           value.offset = 0.3,
-           vline.color = "red",
-           sort.est = TRUE,
-           title = "Regression Coefficients (Standardized)")
-
-# Create a prediction plot
-if(!require(effects)) {
-  install.packages("effects")
-  library(effects)
-}
-
-# Plot effect of rainfall on malaria cases
-rainfall_effect <- allEffects(step_model)
-plot(rainfall_effect$rainfall_mm, 
-     main = "Effect of Rainfall on Predicted Malaria Cases",
-     xlab = "Monthly Rainfall (mm)",
-     ylab = "Predicted Malaria Cases")
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ <code>ggbetweenstats()</code> creates boxplots with statistical test results<br>
-            ✔ <code>ggscatterstats()</code> adds correlation statistics to scatter plots<br>
-            ✔ <code>plot_model()</code> visualizes regression coefficients with confidence intervals<br>
-            ✔ <code>allEffects()</code> shows how predicted values change across the range of a predictor<br>
-            ✔ These visualizations combine data, statistical results, and uncertainty in a single figure</p>
+            <p>✔ Multiple regression includes several predictors in the same model<br>
+            ✔ <code>anova()</code> tests whether adding variables significantly improves the model<br>
+            ✔ <code>vif()</code> checks for multicollinearity (high correlation between predictors)<br>
+            ✔ VIF values > 5-10 suggest problematic multicollinearity<br>
+            ✔ Partial regression plots show each variable's effect while controlling for others</p>
         </div>
         
         <hr>
         
-        <h3>Step 3: Interpreting Effect Sizes</h3>
+        <h3>Step 3: Categorical Predictors in Regression</h3>
         <div class="r-code">
             <code>
-# Calculate and interpret effect sizes for various statistical tests
-if(!require(effectsize)) {
-  install.packages("effectsize")
-  library(effectsize)
-}
+# Include categorical variables in the regression model
+categorical_model <- lm(cases ~ rainfall + temperature + region + season, 
+                       data = malaria_data)
 
-# Cohen's d for t-test (standardized difference between means)
-t_test_result <- t.test(
-  filter(malaria_data, area_type == "Urban")$cases,
-  filter(malaria_data, area_type == "Rural")$cases
-)
+# View model summary
+summary(categorical_model)
 
-cohens_d <- cohens_d(
-  filter(malaria_data, area_type == "Urban")$cases,
-  filter(malaria_data, area_type == "Rural")$cases
-)
+# Show the effect of categorical variables
+install.packages("effects")
+library(effects)
+plot(allEffects(categorical_model))
 
-print(cohens_d)
+# Visualize the effect of region while controlling for other variables
+region_effect <- effect("region", categorical_model)
+region_df <- as.data.frame(region_effect)
 
-# Interpret Cohen's d:
-# |d| < 0.2: "negligible"
-# |d| < 0.5: "small"
-# |d| < 0.8: "medium"
-# |d| >= 0.8: "large"
-
-cat("Cohen's d =", round(as.numeric(cohens_d$Cohens_d), 2), 
-    "- This represents a", 
-    ifelse(abs(as.numeric(cohens_d$Cohens_d)) < 0.2, "negligible", 
-           ifelse(abs(as.numeric(cohens_d$Cohens_d)) < 0.5, "small", 
-                  ifelse(abs(as.numeric(cohens_d$Cohens_d)) < 0.8, "medium", "large"))),
-    "effect size.\n")
-
-# For correlation: r-squared as percentage of variance explained
-correlation <- cor.test(malaria_data$cases, malaria_data$rainfall_mm)
-r_squared <- correlation$estimate^2
-
-cat("r² =", round(r_squared, 3), 
-    "- Rainfall explains approximately", 
-    round(r_squared * 100, 1), 
-    "% of the variance in malaria cases.\n")
-
-# For regression: standardized coefficients (beta weights)
-# Scale the variables to get standardized coefficients
-scaled_data <- malaria_data %>%
-  mutate(across(where(is.numeric), scale))
-
-std_model <- lm(cases ~ rainfall_mm + temperature_avg + humidity_percent, 
-               data = scaled_data)
-
-std_coef <- coef(std_model)
-std_coef_df <- data.frame(
-  Variable = names(std_coef),
-  Standardized_Coefficient = as.numeric(std_coef)
-)
-
-print(std_coef_df)
-
-cat("The standardized coefficients show that a 1 standard deviation change in",
-    std_coef_df$Variable[which.max(abs(std_coef_df$Standardized_Coefficient[-1])) + 1],
-    "has the largest effect on malaria cases.\n")
-
-# For ANOVA: eta-squared and omega-squared
-anova_model <- aov(cases ~ region, data = malaria_data)
-eta_result <- eta_squared(anova_model)
-omega_result <- omega_squared(anova_model)
-
-print(eta_result)
-print(omega_result)
-
-# Interpret eta-squared/omega-squared:
-# < 0.01: "negligible"
-# < 0.06: "small"
-# < 0.14: "medium"
-# >= 0.14: "large"
+ggplot(region_df, aes(x = region, y = fit, ymin = lower, ymax = upper)) +
+  geom_point(size = 3) +
+  geom_errorbar(width = 0.2) +
+  labs(
+    title = "Adjusted Effect of Region on Malaria Cases",
+    subtitle = "Controlling for rainfall, temperature, and season",
+    x = "Region",
+    y = "Adjusted Mean Number of Cases"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ Effect sizes quantify the practical significance of findings beyond p-values<br>
-            ✔ <code>cohens_d()</code> measures the standardized difference between two means<br>
-            ✔ <code>r²</code> represents the proportion of variance explained by a correlation<br>
-            ✔ Standardized regression coefficients allow comparison of predictors on different scales<br>
-            ✔ <code>eta_squared()</code> and <code>omega_squared()</code> quantify the proportion of variance explained by categorical predictors</p>
+            <p>✔ Categorical variables are automatically converted to dummy variables in regression<br>
+            ✔ One level of each categorical variable serves as the reference category<br>
+            ✔ <code>effects</code> package helps visualize the effect of each predictor<br>
+            ✔ Error bars show the confidence interval for adjusted means<br>
+            ✔ These plots show the effect of each variable while holding others constant</p>
         </div>
         
         <hr>
         
-        <h3>Step 4: Reproducible Research Practices</h3>
+        <h3>Step 4: Interaction Terms in Regression</h3>
         <div class="r-code">
             <code>
-# Set up a reproducible research workflow
-# This would typically be at the beginning of your R script or R Markdown document
+# Include interaction between rainfall and season
+interaction_model <- lm(cases ~ rainfall * season + temperature + region, 
+                       data = malaria_data)
 
-# 1. Set a random seed for reproducible results
-set.seed(123)
+# View model summary
+summary(interaction_model)
 
-# 2. Document package versions
-if(!require(sessioninfo)) {
-  install.packages("sessioninfo")
-  library(sessioninfo)
-}
+# Compare with model without interaction
+anova(categorical_model, interaction_model)
 
-session_info <- sessioninfo::session_info()
-print(session_info$platform)
-print(session_info$packages)
+# Visualize the interaction effect
+interaction_plot <- effect("rainfall:season", interaction_model)
+interaction_df <- as.data.frame(interaction_plot)
 
-# 3. Save raw data separately from processed data
-# Create a data processing script that documents all transformations
-
-# Example data processing pipeline
-raw_data <- read.csv("raw_malaria_data.csv")
-
-processed_data <- raw_data %>%
-  # Document each transformation step
-  filter(!is.na(cases)) %>%  # Remove missing case data
-  mutate(
-    # Create derived variables
-    log_cases = log(cases + 1),  # Log transform with +1 for zeros
-    season = case_when(
-      month %in% c(6, 7, 8, 9) ~ "Rainy",
-      TRUE ~ "Dry"
-    ),
-    # Other transformations...
-  )
-
-# Save processed data with date stamp
-write.csv(processed_data, 
-         paste0("processed_malaria_data_", format(Sys.Date(), "%Y%m%d"), ".csv"), 
-         row.names = FALSE)
-
-# 4. Use version control (typically Git) 
-# This would be done outside of R, but you can use system commands
-# system("git add processed_malaria_data_*.csv")
-# system("git commit -m 'Process raw data with documented transformations'")
-
-# 5. Pre-register analyses when possible
-# This would involve creating a document that specifies:
-#  - Research questions/hypotheses
-#  - Variables to be used
-#  - Statistical methods to be employed
-#  - Sample size/power calculations
-#  - Data exclusion criteria
-
-# 6. Share code and data when possible
-# Example using R Open Science tools
-if(!require(piggyback)) {
-  install.packages("piggyback")
-  library(piggyback)
-}
-
-# This would upload your data to a GitHub repository release
-# pb_upload("processed_malaria_data.csv", repo = "username/repository")
-
-# 7. Create a research compendium
-# Directory structure for a reproducible project:
-# project/
-# ├── README.md           # Overview of the project
-# ├── LICENSE.md          # License for code and data
-# ├── data/
-# │   ├── raw/            # Raw, immutable data
-# │   └── processed/      # Processed data, ready for analysis
-# ├── code/
-# │   ├── process_data.R  # Data processing script
-# │   └── analysis.R      # Analysis script
-# ├── results/
-# │   ├── figures/        # Generated figures
-# │   └── tables/         # Generated tables
-# └── manuscript/         # Manuscript text and source files
+ggplot(interaction_df, aes(x = rainfall, y = fit, color = season)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = season), 
+              alpha = 0.2, color = NA) +
+  labs(
+    title = "Interaction Between Rainfall and Season on Malaria Cases",
+    x = "Rainfall (mm)",
+    y = "Predicted Number of Cases",
+    color = "Season",
+    fill = "Season"
+  ) +
+  theme_minimal()
             </code>
         </div>
         
         <div class="explanation">
             <h4>🔍 Explanation:</h4>
-            <p>✔ Reproducible research allows others to verify and build upon your findings<br>
-            ✔ <code>set.seed()</code> ensures that random processes produce the same results<br>
-            ✔ Documenting package versions helps prevent issues from software changes<br>
-            ✔ Separating data processing from analysis creates a clear workflow<br>
-            ✔ Using version control tracks changes to code and data over time<br>
-            ✔ Pre-registration reduces the risk of p-hacking and publication bias<br>
-            ✔ Sharing code and data promotes transparency and collaboration</p>
+            <p>✔ Interaction terms test whether the effect of one variable depends on another<br>
+            ✔ <code>rainfall * season</code> includes both main effects and their interaction<br>
+            ✔ Different slopes for each season indicate that rainfall's effect varies by season<br>
+            ✔ The significant interaction suggests that rainfall may have different impacts in different seasons<br>
+            ✔ This could reflect seasonal differences in mosquito breeding patterns</p>
         </div>
         
         <hr>
         
         <h2>✅ Summary of Week 6</h2>
         <p>By the end of this week, you should be able to:<br>
-        ✔ <strong>Compare malaria data between groups</strong> using appropriate statistical tests (t-tests, ANOVA)<br>
+        ✔ <strong>Compare malaria data between groups</strong> using t-tests and ANOVA<br>
         ✔ <strong>Analyze relationships between variables</strong> using correlation analysis<br>
-        ✔ <strong>Build and interpret regression models</strong> to identify significant predictors of malaria<br>
-        ✔ <strong>Present statistical results</strong> in a clear, comprehensive, and interpretable manner<br>
-        ✔ <strong>Apply reproducible research practices</strong> to ensure the validity and reusability of your analyses</p>
-     
-       
-  <script src="script.js"></script>
+        ✔ <strong>Build predictive models</strong> using linear regression<br>
+        ✔ <strong>Interpret statistical results</strong> in the context of malaria epidemiology</p>
+        
+    </div>
+    
+    <script src="script.js"></script>
 </body>
 </html>
